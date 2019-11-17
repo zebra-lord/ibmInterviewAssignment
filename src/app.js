@@ -12,7 +12,7 @@ app.use('/api/employees', employeeRoutes);
 
 // Fail over route
 app.use(function(req, res) {
-    res.status(404).send('Not found');
+    res.sendStatus(404);
 });
 
 // listen for requests
