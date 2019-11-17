@@ -21,8 +21,15 @@ router.get('/', function(req, res) {
 });
 
 router.route('/:id')
+  /* middleware to validate provided id present */
+  .all((req, res, next) => {
+    var id = req.params['id']
+    if (id in DATABASE)
+      next();
+    else
+      return res.status(404).status(`No employee found with id ${id}`);
+  })
   .get(function(req, res) {
-    //TODO: return 404 if not found
     res.send(DATABASE[req.params['id']])
   })
   .delete(function(req, res) {
