@@ -4,7 +4,6 @@ const express = require('express');
 const router = express.Router();
 
 const CEO_ID = null;
-
 const DATABASE = {
   '1': {
     'firstName': 'mohsin',
@@ -20,5 +19,16 @@ const DATABASE = {
 router.get('/', function(req, res) {
   return res.send(DATABASE);
 });
+
+router.route('/:id')
+  .get(function(req, res) {
+    //TODO: return 404 if not found
+    res.send(DATABASE[req.params['id']])
+  })
+  .delete(function(req, res) {
+    var id = req.params['id']
+    delete DATABASE[id];
+    res.send(`Deleted employee with id ${id}`)
+  })
 
 module.exports = router;
