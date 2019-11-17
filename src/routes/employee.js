@@ -17,7 +17,7 @@ const DATABASE = {
 };
 
 /* GET employees listing. */
-router.get('/', (req, res) => {
+router.get('/', function(req, res) {
   return res.send(DATABASE);
 });
 
