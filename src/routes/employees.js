@@ -2,10 +2,11 @@
 
 const express = require('express');
 const axios = require('axios');
+const uuid = require('uuid/v4');
 const router = express.Router();
 const Employee = require('../models/employee');
 
-const CEO_ID = null;
+let CEO_ID = null;
 const sampleEmployee = new Employee({
     'firstName': 'mohsin',
     'lastName': 'ali',
@@ -13,13 +14,16 @@ const sampleEmployee = new Employee({
     'role': 'LACKEY',
     'quote1': '[On bowling] Straight down the middle. No hook, no spin, no fuss. Anything more and this becomes figure skating.',
     'quote2': 'At that point where you have decided to upgrade from aspiration to expectation and have begun to visualize an outcome, something incredibly important has happened, you have committed to the process of change.'
-  })
+  });
+
+// TODO: move database managment logic to separate module
 const DATABASE = {
   1: sampleEmployee
 };
 
 const HIRE_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const JOB_ROLES = ['CEO', 'VP', 'MANAGER', 'LACKEY'];
+/* Helper function to validate hireDate input */
 var validateHireDate = function(hireDate) {
   if (typeof hireDate !== 'string') return false;
 
@@ -32,6 +36,10 @@ var validateHireDate = function(hireDate) {
 
   return true;
 }
+/**
+ * Middleware to validate provided data for employee data to add
+ * or update to the DATABASE.
+ */
 var validateEmployeeData = function(req, res, next) {
   const body = req.body;
   let employee = {};
@@ -67,17 +75,23 @@ var validateEmployeeData = function(req, res, next) {
 
   req.employee = employee;
   next();
-}
+};
 
+/* Axios instance to request a Ron Swanson quote */
 const ronSwansonQuoteRequester = axios.create({
   baseURL: 'http://ron-swanson-quotes.herokuapp.com/v2/quotes',
   headers: {'Accept': 'application/json'}
 });
+/* Axion instance to request a joke */
 const jokeRequester = axios.create({
   baseURL: 'http://icanhazdadjoke.com',
   headers: {'Accept': 'application/json',
             'User-Agent': 'ma-ibm-test'}
 });
+/**
+ * Middleware to populate employee object with a favorite quote and quote
+ * retrieved from external apis
+ **/
 var populateQuotes = function(req, res, next) {
   axios.all([ronSwansonQuoteRequester.get(), jokeRequester.get()])
     .then(axios.spread(function (rsQuote, joke) {
@@ -86,7 +100,7 @@ var populateQuotes = function(req, res, next) {
       next();
     }))
     .catch(function (err) {
-      res.status(500).send("Failed to fetch quotes with error:\n\n" + err)
+      return res.status(500).send("Failed to fetch quotes with error:\n\n" + err)
     })
 };
 
@@ -96,11 +110,20 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', [validateEmployeeData, populateQuotes], (req, res) => {
-  res.send(req.employee);
-})
+  // TODO: logic in this function should be handled in separate database management module
+
+  // if the job role is CEO check there isn't already a CEO
+  console.log(`ceo = ${CEO_ID}`);
+  if (req.employee.role === 'CEO' && CEO_ID) {
+    return res.status(400).send(`There's already CEO at the company. Employee ${CEO_ID}`);
+  }
+  const id = uuid();
+  DATABASE[id] = req.employee;
+  res.send({'id': id});
+});
 
 router.route('/:id')
-  /* middleware to validate provided id is present */
+  /* middleware to validate provided id is present in the DATABASE */
   .all((req, res, next) => {
     var id = req.params['id']
     if (id in DATABASE)
@@ -117,6 +140,6 @@ router.route('/:id')
     var id = req.params['id']
     delete DATABASE[id];
     res.send(`Deleted employee with id ${id}`)
-  })
+  });
 
 module.exports = router;
