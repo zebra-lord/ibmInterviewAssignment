@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const axios = require('axios');
 const router = express.Router();
 const Employee = require('../models/employee');
 
@@ -68,12 +69,33 @@ var validateEmployeeData = function(req, res, next) {
   next();
 }
 
+const ronSwansonQuoteRequester = axios.create({
+  baseURL: 'http://ron-swanson-quotes.herokuapp.com/v2/quotes',
+  headers: {'Accept': 'application/json'}
+});
+const jokeRequester = axios.create({
+  baseURL: 'http://icanhazdadjoke.com',
+  headers: {'Accept': 'application/json',
+            'User-Agent': 'ma-ibm-test'}
+});
+var populateQuotes = function(req, res, next) {
+  axios.all([ronSwansonQuoteRequester.get(), jokeRequester.get()])
+    .then(axios.spread(function (rsQuote, joke) {
+      req.employee.favoriteQuote = rsQuote.data[0] + " - Ron Swanson";
+      req.employee.favoriteJoke = joke.data["joke"];
+      next();
+    }))
+    .catch(function (err) {
+      res.status(500).send("Failed to fetch quotes with error:\n\n" + err)
+    })
+};
+
 /* GET employees listing. */
 router.get('/', (req, res) => {
   return res.send(DATABASE);
 });
 
-router.post('/', [validateEmployeeData], (req, res) => {
+router.post('/', [validateEmployeeData, populateQuotes], (req, res) => {
   res.send(req.employee);
 })
 
