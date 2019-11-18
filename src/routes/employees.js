@@ -4,22 +4,14 @@ const express = require('express');
 const axios = require('axios');
 const uuid = require('uuid/v4');
 const router = express.Router();
-const Employee = require('../models/employee');
 
+//TODO: Move database management to separate module
+/**
+ * Variable to keep track of the CEO's employee id.
+ * Useful in ensuring there's only one CEO
+ */
 let CEO_ID = null;
-const sampleEmployee = new Employee({
-    'firstName': 'mohsin',
-    'lastName': 'ali',
-    'hireDate': '2019-11-02',
-    'role': 'LACKEY',
-    'quote1': '[On bowling] Straight down the middle. No hook, no spin, no fuss. Anything more and this becomes figure skating.',
-    'quote2': 'At that point where you have decided to upgrade from aspiration to expectation and have begun to visualize an outcome, something incredibly important has happened, you have committed to the process of change.'
-  });
-
-// TODO: move database managment logic to separate module
-const DATABASE = {
-  1: sampleEmployee
-};
+const DATABASE = {};
 
 const HIRE_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const JOB_ROLES = ['CEO', 'VP', 'MANAGER', 'LACKEY'];
@@ -112,12 +104,15 @@ router.get('/', (req, res) => {
 router.post('/', [validateEmployeeData, populateQuotes], (req, res) => {
   // TODO: logic in this function should be handled in separate database management module
 
-  // if the job role is CEO check there isn't already a CEO
-  console.log(`ceo = ${CEO_ID}`);
-  if (req.employee.role === 'CEO' && CEO_ID) {
-    return res.status(400).send(`There's already CEO at the company. Employee ${CEO_ID}`);
-  }
   const id = uuid();
+  console.log(`ceo = ${CEO_ID}`);
+  if (req.employee.role === 'CEO') {
+    if (CEO_ID) { // CEO already exists
+      return res.status(400).send(`There's already CEO at the company. Employee ${CEO_ID}`);
+    }
+
+    CEO_ID = id;
+  }
   DATABASE[id] = req.employee;
   res.send({'id': id});
 });
