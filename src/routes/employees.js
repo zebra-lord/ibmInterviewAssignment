@@ -28,7 +28,6 @@ var validateHireDate = function(hireDate) {
     console.log("here in false " + hireDate);
     return false;
   }
-  console.log("here");
 
   return true;
 }
