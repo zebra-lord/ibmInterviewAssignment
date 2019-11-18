@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const employeeRoutes = require('./routes/employee');
+const employeeRoutes = require('./routes/employees');
 const app = express();
 const port = parseInt(process.env.PORT || '3000');
 
