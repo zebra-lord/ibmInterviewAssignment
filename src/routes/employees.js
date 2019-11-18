@@ -20,14 +20,17 @@ const DATABASE = {
 const HIRE_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const JOB_ROLES = ['CEO', 'VP', 'MANAGER', 'LACKEY'];
 var validateHireDate = function(hireDate) {
-  console.log("here");
   if (typeof hireDate !== 'string') return false;
 
   const matchResult = hireDate.match(HIRE_DATE_REGEX);
   if (!matchResult || // check date provided in correct format
-      (new Date()) > (new Date(hireDate))) { // check that date is in the past
+      (new Date()) < (new Date(hireDate))) { // check that date is in the past
+    console.log("here in false " + hireDate);
     return false;
   }
+  console.log("here");
+
+  return true;
 }
 var validateEmployeeData = function(req, res, next) {
   const body = req.body;
@@ -36,28 +39,30 @@ var validateEmployeeData = function(req, res, next) {
   if (body.firstName) {
     employee.firstName = body.firstName;
   } else {
-    res.status(400).send("Missing employee's firstName in request.");
+    return res.status(400).send("Missing employee's firstName in request.");
   }
 
   // validate lastName field
   if (body.lastName) {
     employee.lastName = body.lastName;
   } else {
-    res.status(400).send("Missing employee's lastName in request.");
+    return res.status(400).send("Missing employee's lastName in request.");
   }
 
   // validate hireDate field
   if (body.hireDate && validateHireDate(body.hireDate)) {
     employee.hireDate = body.hireDate;
   } else {
-    res.status(400).send("Employee hireDate must be in the past and in the format of YYYY-MM-DD.");
+    return res.status(400).send("Employee hireDate must be in the past and in the format of YYYY-MM-DD.");
   }
 
   // validate jobRole field
   if (body.role &&
       typeof body.role === 'string' &&
-      body.role.toUpperCase() in JOB_ROLES) {
+      JOB_ROLES.includes(body.role.toUpperCase())) {
     employee.role = body.role.toUpperCase();
+  } else {
+    return res.status(400).send("Employee role must be one of the following " + JOB_ROLES);
   }
 
   req.employee = employee;
