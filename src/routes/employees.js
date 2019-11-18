@@ -35,14 +35,14 @@ var validateEmployeeData = function(req, res, next) {
   const body = req.body;
   let employee = {};
   // validate firstName field
-  if (body.firstName) {
+  if (body.firstName && typeof body.firstName === 'string') {
     employee.firstName = body.firstName;
   } else {
     return res.status(400).send("Missing employee's firstName in request.");
   }
 
   // validate lastName field
-  if (body.lastName) {
+  if (body.lastName && typeof body.lastName === 'string') {
     employee.lastName = body.lastName;
   } else {
     return res.status(400).send("Missing employee's lastName in request.");
