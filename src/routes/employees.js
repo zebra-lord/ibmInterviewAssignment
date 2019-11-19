@@ -105,7 +105,6 @@ router.post('/', [validateEmployeeData, populateQuotes], (req, res) => {
   // TODO: logic in this function should be handled in separate database management module
 
   const id = uuid();
-  console.log(`ceo = ${CEO_ID}`);
   if (req.employee.role === 'CEO') {
     if (CEO_ID) { // CEO already exists
       return res.status(400).send(`There's already CEO at the company. Employee ${CEO_ID}`);
@@ -130,11 +129,20 @@ router.route('/:id')
   .get(function(req, res) {
     res.send(DATABASE[req.params['id']])
   })
-  /* delete employee with given id */
+  /**
+   * Delete employee for given id from the database.
+   * Responds with the deleted employee if successful.
+   */
   .delete(function(req, res) {
-    var id = req.params['id']
+    let id = req.params['id']
+    let employee = DATABASE[id];
     delete DATABASE[id];
-    res.send(`Deleted employee with id ${id}`)
+    // if the deleted employee was the CEO, reset the CEO_ID variable
+    // TODO: this logic should be in a separate database module
+    if (employee.role === 'CEO') {
+      CEO_ID = null;
+    }
+    res.send(employee);
   });
 
 module.exports = router;
