@@ -96,17 +96,21 @@ var populateFavoriteJokeAndQuotes = function(req, res, next) {
     })
 };
 
+/**
+ * Middleware to validate the favorite quote and joke provided
+ * for updating employee data. 
+ */
 var validateFaveJokeAndQuote = function(req, res, next) {
   if (req.body.favoriteJoke && typeof req.body.favoriteJoke === 'string') {
     req.employee.favoriteJoke = req.body.favoriteJoke;
   } else {
-    return res.status(400).send("Favorite joke not porvided or of incorrect format.");
+    return res.status(400).send("Favorite joke not provided or of incorrect format.");
   }
 
   if (req.body.favoriteQuote && typeof req.body.favoriteQuote === 'string') {
     req.employee.favoriteQuote = req.body.favoriteQuote;
   } else {
-    return res.status(400).send("Favorite quote not porvided or of incorrect format.");
+    return res.status(400).send("Favorite quote not provided or of incorrect format.");
   }
 
   next();
@@ -167,7 +171,7 @@ router.route('/:id')
   /**
    * Update employee data.
    * 
-   * The api currently requrires all employee data, including the favorite
+   * The api currently requires all employee data, including the favorite
    * quote and joke, to be provided. This probably isn't the right approach
    * as we'll likely just want to update a couple pieces of employee information
    * at a time.
