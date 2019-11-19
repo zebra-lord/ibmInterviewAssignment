@@ -101,6 +101,10 @@ router.get('/', (req, res) => {
   return res.send(DATABASE);
 });
 
+/**
+ * POST an employee to the database.
+ * Responds with the employee object along with their id if successful.
+ */
 router.post('/', [validateEmployeeData, populateQuotes], (req, res) => {
   // TODO: logic in this function should be handled in separate database management module
 
@@ -113,7 +117,7 @@ router.post('/', [validateEmployeeData, populateQuotes], (req, res) => {
     CEO_ID = id;
   }
   DATABASE[id] = req.employee;
-  res.send({'id': id});
+  res.send({id: id, employee: req.employee});
 });
 
 router.route('/:id')
