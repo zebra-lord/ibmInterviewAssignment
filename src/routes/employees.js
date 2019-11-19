@@ -2,21 +2,13 @@
 
 const express = require('express');
 const axios = require('axios');
-const uuid = require('uuid/v4');
+const db = require('../database/EmployeeDatabase');
 const router = express.Router();
-
-//TODO: Move database management to separate module
-/**
- * Variable to keep track of the CEO's employee id.
- * Useful in ensuring there's only one CEO
- */
-let CEO_ID = null;
-const DATABASE = {};
 
 const HIRE_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const JOB_ROLES = ['CEO', 'VP', 'MANAGER', 'LACKEY'];
 /* Helper function to validate hireDate input */
-var validateHireDate = function(hireDate) {
+function validateHireDate(hireDate) {
   if (typeof hireDate !== 'string') return false;
 
   const matchResult = hireDate.match(HIRE_DATE_REGEX);
@@ -32,7 +24,7 @@ var validateHireDate = function(hireDate) {
  * Middleware to validate provided data for employee data to add
  * or update to the DATABASE.
  */
-var validateEmployeeData = function(req, res, next) {
+function validateEmployeeData(req, res, next) {
   const body = req.body;
   let employee = {};
   // validate firstName field
@@ -53,7 +45,8 @@ var validateEmployeeData = function(req, res, next) {
   if (body.hireDate && validateHireDate(body.hireDate)) {
     employee.hireDate = body.hireDate;
   } else {
-    return res.status(400).send("Employee hireDate must be in the past and in the format of YYYY-MM-DD.");
+    return res.status(400).send("Employee hireDate must be in the past and in" +
+        " the format of YYYY-MM-DD.");
   }
 
   // validate jobRole field
@@ -62,7 +55,8 @@ var validateEmployeeData = function(req, res, next) {
       JOB_ROLES.includes(body.role.toUpperCase())) {
     employee.role = body.role.toUpperCase();
   } else {
-    return res.status(400).send("Employee role must be one of the following " + JOB_ROLES);
+    return res.status(400).send("Employee role must be one of the following " +
+        JOB_ROLES);
   }
 
   req.employee = employee;
@@ -84,15 +78,16 @@ const jokeRequester = axios.create({
  * Middleware to populate employee object with a favorite quote and quote
  * retrieved from external apis
  **/
-var populateFavoriteJokeAndQuotes = function(req, res, next) {
+function populateFavoriteJokeAndQuotes(req, res, next) {
   axios.all([ronSwansonQuoteRequester.get(), jokeRequester.get()])
-    .then(axios.spread(function (rsQuote, joke) {
+    .then(axios.spread((rsQuote, joke) => {
       req.employee.favoriteQuote = rsQuote.data[0] + " - Ron Swanson";
       req.employee.favoriteJoke = joke.data["joke"];
       next();
     }))
-    .catch(function (err) {
-      return res.status(500).send("Failed to fetch quotes with error:\n\n" + err)
+    .catch(err => {
+      return res.status(500).send("Failed to fetch quotes with error:\n\n" +
+          err);
     })
 };
 
@@ -100,17 +95,19 @@ var populateFavoriteJokeAndQuotes = function(req, res, next) {
  * Middleware to validate the favorite quote and joke provided
  * for updating employee data. 
  */
-var validateFaveJokeAndQuote = function(req, res, next) {
+function validateFaveJokeAndQuote(req, res, next) {
   if (req.body.favoriteJoke && typeof req.body.favoriteJoke === 'string') {
     req.employee.favoriteJoke = req.body.favoriteJoke;
   } else {
-    return res.status(400).send("Favorite joke not provided or of incorrect format.");
+    return res.status(400).send("Favorite joke not provided or of incorrect " +
+        "format.");
   }
 
   if (req.body.favoriteQuote && typeof req.body.favoriteQuote === 'string') {
     req.employee.favoriteQuote = req.body.favoriteQuote;
   } else {
-    return res.status(400).send("Favorite quote not provided or of incorrect format.");
+    return res.status(400).send("Favorite quote not provided or of incorrect " +
+        "format.");
   }
 
   next();
@@ -118,55 +115,46 @@ var validateFaveJokeAndQuote = function(req, res, next) {
 
 /* GET employees listing. */
 router.get('/', (req, res) => {
-  return res.send(DATABASE);
+  db.getAll()
+    .then(employees => res.send(employees))
+    .catch(err => { res.status(err.status).send(err.message) });
 });
 
 /**
  * POST an employee to the database.
  * Responds with the employee object along with their id if successful.
  */
-router.post('/', [validateEmployeeData, populateFavoriteJokeAndQuotes], (req, res) => {
-  // TODO: logic in this function should be handled in separate database management module
-
-  const id = uuid();
-  if (req.employee.role === 'CEO') {
-    if (CEO_ID) { // CEO already exists
-      return res.status(400).send(`There's already CEO at the company. Employee ${CEO_ID}`);
-    }
-
-    CEO_ID = id;
-  }
-  DATABASE[id] = req.employee;
-  res.send({id: id, employee: req.employee});
+router.post('/', [validateEmployeeData, populateFavoriteJokeAndQuotes],
+    (req, res) => {
+  db.add(req.employee)
+    .then(id => {res.send({id: id, employee: req.employee})})
+    .catch(err => {
+      res.status(err.status).send(err.message)});
 });
 
 router.route('/:id')
   /* middleware to validate provided id is present in the DATABASE */
   .all((req, res, next) => {
     var id = req.params['id']
-    if (id in DATABASE)
+    if (db.contains(id))
       next();
     else
       return res.status(404).send(`No employee found with id ${id}`);
   })
   /* get employee for given id */
   .get((req, res) => {
-    res.send(DATABASE[req.params['id']])
+    db.get(req.params['id'])
+      .then(employee => res.send(employee))
+      .catch(err => res.status(err.status).send(err.message));
   })
   /**
    * Delete employee for given id from the database.
    * Responds with the deleted employee if successful.
    */
   .delete((req, res) => {
-    let id = req.params['id']
-    let employee = DATABASE[id];
-    delete DATABASE[id];
-    // if the deleted employee was the CEO, reset the CEO_ID variable
-    // TODO: this logic should be in a separate database module
-    if (employee.role === 'CEO') {
-      CEO_ID = null;
-    }
-    res.send(employee);
+    db.delete(req.params['id'])
+      .then(employee => res.send(employee))
+      .catch(err => res.status(err.status).send(err.message));
   })
   /**
    * Update employee data.
@@ -179,25 +167,9 @@ router.route('/:id')
    * Responds with the old employee data if successful.
    */
   .put([validateEmployeeData, validateFaveJokeAndQuote], (req, res) => {
-    let id = req.params['id']
-    let oldEmployee = DATABASE[id];
-
-    // special logic if role is being updated to CEO
-    if (req.employee.role === 'CEO') {
-      if (!CEO_ID) {
-        // if there isn't already a CEO keep track of the id
-        CEO_ID = id;
-      } else if (CEO_ID !== id) {
-        return res.status(400).send(`Employee ${CEO_ID} is already the CEO. Cannot upgrade this employee to CEO.`);
-      }
-    } else if (oldEmployee.role === 'CEO') {
-      // if we're downgrading the CEO reset the CEO_ID variable
-      CEO_ID = null;
-    }
-    console.log(`emp updated to ${req.employee}`);
-
-    DATABASE[id] = req.employee;
-    res.send(oldEmployee);
+    db.update(req.params['id'], req.employee)
+      .then(oldEmployee => {res.send(oldEmployee)})
+      .catch(err => res.status(err.status).send(err.message));
   });
 
 module.exports = router;

@@ -1,0 +1,26 @@
+doctype html
+html
+  head
+    title Employee Database
+  body
+    h1 Employees
+    ul
+      each employee, id in employees
+        li
+          a(href="/api/employees/"+id)= employee.firstName + ' ' + employee.lastName
+    h1 Add an Employee
+    form(method='POST', action='/api/employees')
+      #input-field
+        label First Name
+        input(name='firstName', type='text')
+      #input-field
+        label Last Name
+        input(name='lastName', type='text')
+      #input-field
+        label Hire Date (YYYY-MM-DD)
+        input(name='hireDate', type='text')
+      #input-field
+        label Role (CEO, VP, Manager, or Lackey)
+        input(name='role', type='text')
+      br
+      input(type='submit', value='Submit')
